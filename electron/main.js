@@ -152,6 +152,7 @@ function createWindow() {
     },
   });
 
+  mainWindow.setMenu(null);
   mainWindow.setMenuBarVisibility(false);
 
   // Determine frontend URL
