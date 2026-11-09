@@ -1,0 +1,85 @@
+name: Build & Release Skydeck
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Test Suite
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Run Backend Unit Tests
+        run: |
+          cd backend
+          go test -v ./...
+
+      - name: Run Security & Crypto Tests
+        run: |
+          npm ci
+          node scripts/test-suite.js
+
+  build:
+    name: Build & Package Windows Installer
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Compile Go Backend
+        run: |
+          mkdir -p electron/bin
+          cd backend
+          go build -ldflags="-s -w" -o ../electron/bin/skydeck-backend.exe
+          cd ..
+
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+          cd ..
+
+      - name: Package Electron Installer
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: |
+          npm ci
+          npx electron-builder --win
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Skydeck-Windows-Installer
+          path: dist/Skydeck-Setup.exe
+          if-no-files-found: error
+
