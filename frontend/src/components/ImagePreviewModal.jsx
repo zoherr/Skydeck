@@ -166,3 +166,4 @@ export default function ImagePreviewModal({ isOpen, file, sessionId, onClose, on
     </div>
   );
 }
+

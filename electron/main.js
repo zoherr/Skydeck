@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, clipboard } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -133,12 +133,15 @@ function stopBackend() {
 // Window Creation
 // -------------------------------------------------------------
 function createWindow() {
+  Menu.setApplicationMenu(null);
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 820,
     minWidth: 960,
     minHeight: 640,
     backgroundColor: '#0a0c10',
+    autoHideMenuBar: true,
     show: false,
     title: 'Skydeck — VPS File Manager',
     webPreferences: {
@@ -148,6 +151,8 @@ function createWindow() {
       sandbox: true,
     },
   });
+
+  mainWindow.setMenuBarVisibility(false);
 
   // Determine frontend URL
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
