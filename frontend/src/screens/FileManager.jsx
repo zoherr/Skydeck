@@ -3,12 +3,14 @@ import TopBar from '../components/TopBar';
 import FileList from '../components/FileList';
 import ContextMenu from '../components/ContextMenu';
 import EditorModal from '../components/EditorModal';
+import ImagePreviewModal from '../components/ImagePreviewModal';
 import PermissionsModal from '../components/PermissionsModal';
 import UploadProgress from '../components/UploadProgress';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { api } from '../utils/api';
+import { getFileExtension } from '../utils/format';
 
-export default function FileManager({ activeSession, onToast }) {
+export default function FileManager({ activeSession, navTarget, onToast }) {
   const [currentPath, setCurrentPath] = useState(activeSession?.initial_path || '/');
   const [parentPath, setParentPath] = useState('/');
   const [entries, setEntries] = useState([]);
@@ -26,6 +28,10 @@ export default function FileManager({ activeSession, onToast }) {
   const [editorFile, setEditorFile] = useState(null);
   const [editorContent, setEditorContent] = useState('');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+
+  // Image Preview Modal
+  const [imageFile, setImageFile] = useState(null);
+  const [isImageOpen, setIsImageOpen] = useState(false);
 
   // Permissions Modal
   const [chmodFile, setChmodFile] = useState(null);
@@ -69,8 +75,24 @@ export default function FileManager({ activeSession, onToast }) {
     fetchDirectory(currentPath);
   }, [activeSession]);
 
-  // Open file in Editor
+  // Handle external navigation target from Sidebar Quick Locations
+  useEffect(() => {
+    if (navTarget) {
+      fetchDirectory(navTarget);
+    }
+  }, [navTarget]);
+
+  // Open file in Editor or Image Preview
   const handleOpenFile = async (file) => {
+    const ext = getFileExtension(file.name);
+    const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico'];
+
+    if (imageExts.includes(ext)) {
+      setImageFile(file);
+      setIsImageOpen(true);
+      return;
+    }
+
     try {
       const res = await api.readFile(activeSession.session_id, file.path);
       setEditorFile(file);
@@ -321,6 +343,8 @@ export default function FileManager({ activeSession, onToast }) {
         entries={filteredEntries}
         loading={loading}
         selectedFile={selectedFile}
+        currentPath={currentPath}
+        parentPath={parentPath}
         onSelectFile={setSelectedFile}
         onOpenFolder={fetchDirectory}
         onOpenFile={handleOpenFile}
@@ -358,6 +382,15 @@ export default function FileManager({ activeSession, onToast }) {
         onSave={handleSaveEditor}
       />
 
+      {/* Image Preview Modal */}
+      <ImagePreviewModal
+        isOpen={isImageOpen}
+        file={imageFile}
+        sessionId={activeSession?.session_id}
+        onClose={() => setIsImageOpen(false)}
+        onDownload={handleDownload}
+      />
+
       {/* Permissions Modal */}
       <PermissionsModal
         isOpen={isChmodOpen}
@@ -383,4 +416,3 @@ export default function FileManager({ activeSession, onToast }) {
     </div>
   );
 }
-

@@ -16,6 +16,7 @@ export default function App() {
   const [savedProfiles, setSavedProfiles] = useState([]);
   const [currentView, setCurrentView] = useState('connect'); // 'connect' | 'manager'
   const [selectedProfileForConnect, setSelectedProfileForConnect] = useState(null);
+  const [navTarget, setNavTarget] = useState(null);
 
   const [connectLoading, setConnectLoading] = useState(false);
   const [connectError, setConnectError] = useState('');
@@ -95,6 +96,7 @@ export default function App() {
       };
 
       setActiveSession(sessionObj);
+      setNavTarget(null);
       setCurrentView('manager');
 
       // Save profile if requested
@@ -147,6 +149,7 @@ export default function App() {
       }
     }
     setActiveSession(null);
+    setNavTarget(null);
     setCurrentView('connect');
     setToast({
       type: 'info',
@@ -205,6 +208,10 @@ export default function App() {
         activeSession={activeSession}
         savedProfiles={savedProfiles}
         onDisconnect={handleDisconnect}
+        onNavigate={(path) => {
+          setNavTarget(path);
+          setCurrentView('manager');
+        }}
         onConnectProfile={(profile) => {
           setSelectedProfileForConnect(profile);
           setCurrentView('connect');
@@ -229,7 +236,11 @@ export default function App() {
             savedProfiles={savedProfiles}
           />
         ) : (
-          <FileManager activeSession={activeSession} onToast={setToast} />
+          <FileManager
+            activeSession={activeSession}
+            navTarget={navTarget}
+            onToast={setToast}
+          />
         )}
       </main>
 
@@ -249,4 +260,3 @@ export default function App() {
     </div>
   );
 }
-

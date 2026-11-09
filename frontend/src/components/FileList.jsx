@@ -10,6 +10,7 @@ import {
   ArrowUp,
   ArrowDown,
   Upload,
+  CornerLeftUp,
 } from 'lucide-react';
 import { formatBytes, formatDate, getFileExtension } from '../utils/format';
 
@@ -17,6 +18,8 @@ export default function FileList({
   entries,
   loading,
   selectedFile,
+  currentPath,
+  parentPath,
   onSelectFile,
   onOpenFolder,
   onOpenFile,
@@ -93,11 +96,6 @@ export default function FileList({
     }
   };
 
-  const startRename = (file) => {
-    setRenamingFile(file);
-    setNewName(file.name);
-  };
-
   const handleRenameKeyDown = (e, file) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -139,6 +137,8 @@ export default function FileList({
       <ArrowDown className="w-3 h-3 text-accent" />
     );
   };
+
+  const isSubdirectory = currentPath && currentPath !== '/' && parentPath;
 
   return (
     <div
@@ -197,80 +197,101 @@ export default function FileList({
             <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin mb-3" />
             <span className="text-xs font-medium">Fetching remote directory...</span>
           </div>
-        ) : sortedEntries.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-textMuted p-8">
-            <Folder className="w-12 h-12 text-border/60 mb-3" />
-            <p className="text-sm font-medium text-textPrimary">This folder is empty</p>
-            <p className="text-xs text-textMuted mt-1">Drag files here or click "Upload" above.</p>
-          </div>
         ) : (
           <div>
-            {sortedEntries.map((file) => {
-              const isSelected = selectedFile && selectedFile.path === file.path;
-              const isRenaming = renamingFile && renamingFile.path === file.path;
-
-              return (
-                <div
-                  key={file.path}
-                  onClick={() => onSelectFile(file)}
-                  onDoubleClick={() => handleRowDoubleClick(file)}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    onSelectFile(file);
-                    onContextMenu(e, file);
-                  }}
-                  className={`flex items-center px-4 py-2 text-xs border-b border-border/30 cursor-pointer select-none transition-hover group ${
-                    isSelected
-                      ? 'bg-surface-2 text-textPrimary font-medium border-accent/40'
-                      : 'hover:bg-surface/60 text-textPrimary/90'
-                  }`}
-                >
-                  {/* File icon + Name */}
-                  <div className="flex-1 flex items-center gap-2.5 min-w-0 pr-4">
-                    {getFileIcon(file)}
-
-                    {isRenaming ? (
-                      <input
-                        type="text"
-                        value={newName}
-                        autoFocus
-                        onChange={(e) => setNewName(e.target.value)}
-                        onKeyDown={(e) => handleRenameKeyDown(e, file)}
-                        onBlur={() => {
-                          if (newName.trim() && newName !== file.name) {
-                            onRenameSubmit(file, newName.trim());
-                          }
-                          setRenamingFile(null);
-                        }}
-                        className="bg-surface border border-accent rounded-input px-1.5 py-0.5 text-xs text-textPrimary focus:outline-none w-full max-w-sm"
-                      />
-                    ) : (
-                      <span className="truncate group-hover:text-white">{file.name}</span>
-                    )}
-                  </div>
-
-                  {/* Size */}
-                  <div className="w-28 text-right font-mono text-textMuted truncate">
-                    {file.is_dir ? '—' : formatBytes(file.size)}
-                  </div>
-
-                  {/* Modified */}
-                  <div className="w-48 text-right text-textMuted truncate">
-                    {formatDate(file.mod_time)}
-                  </div>
-
-                  {/* Permissions */}
-                  <div className="w-28 text-right font-mono text-textMuted/80 text-[11px] truncate">
-                    {file.octal_mode ? `${file.octal_mode} ` : ''}
-                    <span className="text-[10px] text-textMuted">{file.mode}</span>
-                  </div>
+            {/* Top row: Parent directory shortcut (..) */}
+            {isSubdirectory && (
+              <div
+                onDoubleClick={() => onOpenFolder(parentPath)}
+                className="flex items-center px-4 py-2 text-xs border-b border-border/30 cursor-pointer select-none text-textMuted hover:bg-surface/70 hover:text-textPrimary transition-hover group"
+                title={`Double-click to go up to ${parentPath}`}
+              >
+                <div className="flex-1 flex items-center gap-2.5 min-w-0 pr-4">
+                  <CornerLeftUp className="w-4 h-4 text-accent shrink-0" />
+                  <span className="font-bold text-textPrimary text-sm font-mono leading-none">..</span>
+                  <span className="text-[11px] text-textMuted">
+                    (Parent Directory: <code className="text-textPrimary">{parentPath}</code>)
+                  </span>
                 </div>
-              );
-            })}
+                <div className="w-28 text-right font-mono text-textMuted/40">—</div>
+                <div className="w-48 text-right text-textMuted/40">—</div>
+                <div className="w-28 text-right font-mono text-textMuted/40">—</div>
+              </div>
+            )}
+
+            {sortedEntries.length === 0 && !isSubdirectory ? (
+              <div className="h-full flex flex-col items-center justify-center text-textMuted p-12">
+                <Folder className="w-12 h-12 text-border/60 mb-3" />
+                <p className="text-sm font-medium text-textPrimary">This folder is empty</p>
+                <p className="text-xs text-textMuted mt-1">Drag files here or click "Upload" above.</p>
+              </div>
+            ) : (
+              sortedEntries.map((file) => {
+                const isSelected = selectedFile && selectedFile.path === file.path;
+                const isRenaming = renamingFile && renamingFile.path === file.path;
+
+                return (
+                  <div
+                    key={file.path}
+                    onClick={() => onSelectFile(file)}
+                    onDoubleClick={() => handleRowDoubleClick(file)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      onSelectFile(file);
+                      onContextMenu(e, file);
+                    }}
+                    className={`flex items-center px-4 py-2 text-xs border-b border-border/30 cursor-pointer select-none transition-hover group ${
+                      isSelected
+                        ? 'bg-surface-2 text-textPrimary font-medium border-accent/40'
+                        : 'hover:bg-surface/60 text-textPrimary/90'
+                    }`}
+                  >
+                    {/* File icon + Name */}
+                    <div className="flex-1 flex items-center gap-2.5 min-w-0 pr-4">
+                      {getFileIcon(file)}
+
+                      {isRenaming ? (
+                        <input
+                          type="text"
+                          value={newName}
+                          autoFocus
+                          onChange={(e) => setNewName(e.target.value)}
+                          onKeyDown={(e) => handleRenameKeyDown(e, file)}
+                          onBlur={() => {
+                            if (newName.trim() && newName !== file.name) {
+                              onRenameSubmit(file, newName.trim());
+                            }
+                            setRenamingFile(null);
+                          }}
+                          className="bg-surface border border-accent rounded-input px-1.5 py-0.5 text-xs text-textPrimary focus:outline-none w-full max-w-sm"
+                        />
+                      ) : (
+                        <span className="truncate group-hover:text-white font-medium">{file.name}</span>
+                      )}
+                    </div>
+
+                    {/* Size */}
+                    <div className="w-28 text-right font-mono text-textMuted truncate">
+                      {file.is_dir ? '—' : formatBytes(file.size)}
+                    </div>
+
+                    {/* Modified */}
+                    <div className="w-48 text-right text-textMuted truncate">
+                      {formatDate(file.mod_time)}
+                    </div>
+
+                    {/* Permissions */}
+                    <div className="w-28 text-right font-mono text-textMuted/80 text-[11px] truncate">
+                      {file.octal_mode ? `${file.octal_mode} ` : ''}
+                      <span className="text-[10px] text-textMuted">{file.mode}</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
       </div>
     </div>
   );
 }
-

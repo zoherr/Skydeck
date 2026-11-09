@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   ArrowLeft,
   RotateCw,
@@ -8,6 +8,8 @@ import {
   X,
   ChevronRight,
   HardDrive,
+  Edit2,
+  Check,
 } from 'lucide-react';
 
 export default function TopBar({
@@ -23,7 +25,20 @@ export default function TopBar({
 }) {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
-  const fileInputRef = useRef(null);
+  const [isEditingPath, setIsEditingPath] = useState(false);
+  const [manualPath, setManualPath] = useState(currentPath || '/');
+  const pathInputRef = useRef(null);
+
+  useEffect(() => {
+    setManualPath(currentPath || '/');
+  }, [currentPath]);
+
+  useEffect(() => {
+    if (isEditingPath && pathInputRef.current) {
+      pathInputRef.current.focus();
+      pathInputRef.current.select();
+    }
+  }, [isEditingPath]);
 
   // Compute breadcrumb segments
   const segments = currentPath ? currentPath.split('/').filter(Boolean) : [];
@@ -34,6 +49,15 @@ export default function TopBar({
       return;
     }
     const target = '/' + segments.slice(0, index + 1).join('/');
+    onNavigate(target);
+  };
+
+  const handleManualPathSubmit = (e) => {
+    e.preventDefault();
+    let target = manualPath.trim();
+    if (!target) target = '/';
+    if (!target.startsWith('/')) target = '/' + target;
+    setIsEditingPath(false);
     onNavigate(target);
   };
 
@@ -48,59 +72,105 @@ export default function TopBar({
 
   return (
     <div className="flex items-center justify-between px-4 py-2 bg-surface border-b border-border select-none shrink-0 gap-3">
-      {/* Navigation & Breadcrumb */}
+      {/* Navigation & Breadcrumb / Address Bar */}
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <button
           onClick={() => parentPath && onNavigate(parentPath)}
           disabled={!parentPath || currentPath === '/'}
-          className="p-1.5 text-textMuted hover:text-textPrimary hover:bg-surface-2 rounded-btn transition-hover disabled:opacity-30 disabled:hover:bg-transparent"
-          title="Back to parent folder"
+          className="p-1.5 text-textMuted hover:text-textPrimary hover:bg-surface-2 rounded-btn transition-hover disabled:opacity-30 disabled:hover:bg-transparent shrink-0"
+          title={`Back to ${parentPath || 'parent'}`}
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
 
-        {/* Clickable Breadcrumbs */}
-        <div className="flex items-center gap-1 overflow-x-auto py-1 text-xs text-textMuted scrollbar-none">
-          <button
-            onClick={() => handleBreadcrumbClick(-1)}
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded transition-hover hover:text-textPrimary hover:bg-surface-2 ${
-              segments.length === 0 ? 'text-accent font-semibold' : ''
-            }`}
-          >
-            <HardDrive className="w-3.5 h-3.5" />
-            <span>root</span>
-          </button>
+        {isEditingPath ? (
+          <form onSubmit={handleManualPathSubmit} className="flex-1 flex items-center gap-1.5 max-w-xl">
+            <input
+              ref={pathInputRef}
+              type="text"
+              value={manualPath}
+              onChange={(e) => setManualPath(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setIsEditingPath(false);
+              }}
+              placeholder="/var/www/html or /"
+              className="w-full bg-surface-2 border border-accent px-3 py-1 text-xs text-textPrimary rounded-input focus:outline-none font-mono"
+            />
+            <button
+              type="submit"
+              className="p-1 bg-accent hover:bg-accent-hover text-white rounded transition-hover"
+              title="Go"
+            >
+              <Check className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsEditingPath(false)}
+              className="p-1 text-textMuted hover:text-textPrimary rounded hover:bg-surface-2"
+              title="Cancel"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </form>
+        ) : (
+          <div className="flex items-center gap-1 group flex-1 min-w-0 overflow-hidden">
+            {/* Clickable Breadcrumbs */}
+            <div className="flex items-center gap-1 overflow-x-auto py-1 text-xs text-textMuted scrollbar-none min-w-0">
+              {/* Root "/" button */}
+              <button
+                onClick={() => handleBreadcrumbClick(-1)}
+                className={`flex items-center gap-1.5 px-2 py-0.5 rounded transition-hover hover:text-textPrimary hover:bg-surface-2 shrink-0 ${
+                  segments.length === 0
+                    ? 'text-accent font-semibold bg-surface-2 border border-accent/30'
+                    : 'text-textMuted'
+                }`}
+                title="Go to Root Directory (/)"
+              >
+                <HardDrive className="w-3.5 h-3.5 text-accent" />
+                <span className="font-mono font-bold">/</span>
+              </button>
 
-          {segments.map((seg, idx) => {
-            const isLast = idx === segments.length - 1;
-            return (
-              <React.Fragment key={idx}>
-                <ChevronRight className="w-3 h-3 text-border shrink-0" />
-                <button
-                  onClick={() => handleBreadcrumbClick(idx)}
-                  className={`px-1.5 py-0.5 rounded transition-hover truncate max-w-[120px] ${
-                    isLast
-                      ? 'text-textPrimary font-semibold bg-surface-2'
-                      : 'hover:text-textPrimary hover:bg-surface-2'
-                  }`}
-                  title={seg}
-                >
-                  {seg}
-                </button>
-              </React.Fragment>
-            );
-          })}
-        </div>
+              {segments.map((seg, idx) => {
+                const isLast = idx === segments.length - 1;
+                return (
+                  <React.Fragment key={idx}>
+                    <ChevronRight className="w-3 h-3 text-border shrink-0" />
+                    <button
+                      onClick={() => handleBreadcrumbClick(idx)}
+                      className={`px-2 py-0.5 rounded transition-hover truncate max-w-[140px] font-mono ${
+                        isLast
+                          ? 'text-textPrimary font-semibold bg-surface-2 border border-border/50'
+                          : 'hover:text-textPrimary hover:bg-surface-2'
+                      }`}
+                      title={`Go to /${segments.slice(0, idx + 1).join('/')}`}
+                    >
+                      {seg}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+
+            {/* Click to edit path shortcut */}
+            <button
+              onClick={() => setIsEditingPath(true)}
+              className="p-1 text-textMuted hover:text-textPrimary hover:bg-surface-2 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-1"
+              title="Edit Path (Type / or any folder)"
+            >
+              <Edit2 className="w-3 h-3" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Action buttons + Search */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         {/* Search */}
-        <div className="relative w-48">
+        <div className="relative w-44">
           <Search className="w-3.5 h-3.5 text-textMuted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search current folder..."
+            placeholder="Filter files..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full bg-surface-2 border border-border text-xs text-textPrimary pl-8 pr-7 py-1 rounded-input focus:outline-none focus:border-accent"
@@ -193,4 +263,3 @@ export default function TopBar({
     </div>
   );
 }
-

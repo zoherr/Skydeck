@@ -6,8 +6,12 @@ import {
   Lock,
   Plus,
   Trash2,
-  Terminal,
-  ShieldCheck,
+  HardDrive,
+  Home,
+  Globe,
+  Sliders,
+  FileText,
+  Folder,
   ChevronRight,
 } from 'lucide-react';
 
@@ -20,6 +24,7 @@ export default function Sidebar({
   onOpenSettings,
   onLockApp,
   onDeleteProfile,
+  onNavigate,
 }) {
   return (
     <aside className="w-64 bg-surface border-r border-border flex flex-col h-full select-none shrink-0">
@@ -85,6 +90,65 @@ export default function Sidebar({
             <Server className="w-3.5 h-3.5" />
             <span>Connect to Server</span>
           </button>
+        </div>
+      )}
+
+      {/* Quick Locations (When Connected) */}
+      {activeSession && onNavigate && (
+        <div className="p-3 border-b border-border bg-surface/30">
+          <div className="text-[10px] font-semibold text-textMuted uppercase tracking-wider mb-2 px-1">
+            Quick Locations
+          </div>
+          <div className="grid grid-cols-2 gap-1 text-xs">
+            <button
+              onClick={() => onNavigate('/')}
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-btn hover:bg-surface-2 text-textPrimary text-left transition-hover border border-transparent hover:border-border/50"
+              title="Go to Root Directory (/)"
+            >
+              <HardDrive className="w-3.5 h-3.5 text-accent shrink-0" />
+              <span className="truncate font-medium">Root (/)</span>
+            </button>
+            <button
+              onClick={() => onNavigate(activeSession.initial_path || '/root')}
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-btn hover:bg-surface-2 text-textPrimary text-left transition-hover border border-transparent hover:border-border/50"
+              title="Go to User Home (~)"
+            >
+              <Home className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="truncate font-medium">Home (~)</span>
+            </button>
+            <button
+              onClick={() => onNavigate('/var/www')}
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-btn hover:bg-surface-2 text-textPrimary text-left transition-hover border border-transparent hover:border-border/50"
+              title="Go to /var/www"
+            >
+              <Globe className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+              <span className="truncate font-medium">/var/www</span>
+            </button>
+            <button
+              onClick={() => onNavigate('/etc')}
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-btn hover:bg-surface-2 text-textPrimary text-left transition-hover border border-transparent hover:border-border/50"
+              title="Go to /etc"
+            >
+              <Sliders className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              <span className="truncate font-medium">/etc</span>
+            </button>
+            <button
+              onClick={() => onNavigate('/var/log')}
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-btn hover:bg-surface-2 text-textPrimary text-left transition-hover border border-transparent hover:border-border/50"
+              title="Go to /var/log"
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span className="truncate font-medium">/var/log</span>
+            </button>
+            <button
+              onClick={() => onNavigate('/tmp')}
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-btn hover:bg-surface-2 text-textPrimary text-left transition-hover border border-transparent hover:border-border/50"
+              title="Go to /tmp"
+            >
+              <Folder className="w-3.5 h-3.5 text-textMuted shrink-0" />
+              <span className="truncate font-medium">/tmp</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -170,4 +234,3 @@ export default function Sidebar({
     </aside>
   );
 }
-
