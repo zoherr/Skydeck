@@ -148,3 +148,4 @@ export default function LockScreen({ onUnlocked, onResetApp }) {
     </div>
   );
 }
+

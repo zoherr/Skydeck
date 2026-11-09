@@ -88,3 +88,4 @@ func PingHandler(c *gin.Context) {
 		},
 	})
 }
+

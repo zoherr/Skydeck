@@ -383,3 +383,4 @@ export default function FileManager({ activeSession, onToast }) {
     </div>
   );
 }
+

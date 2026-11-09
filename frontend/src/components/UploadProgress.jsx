@@ -42,3 +42,4 @@ export default function UploadProgress({ progress, onCancel }) {
     </div>
   );
 }
+

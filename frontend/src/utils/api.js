@@ -218,3 +218,4 @@ export const api = {
       body: JSON.stringify({ session_id: sessionId, path, mode }),
     }),
 };
+

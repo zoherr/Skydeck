@@ -75,3 +75,4 @@ export function getLanguageFromExt(ext) {
   };
   return map[ext] || 'plaintext';
 }
+

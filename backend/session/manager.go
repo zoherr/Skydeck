@@ -279,3 +279,4 @@ func (s *Session) CopyFileStream(remotePath string, src io.Reader) (int64, error
 
 	return io.Copy(f, src)
 }
+

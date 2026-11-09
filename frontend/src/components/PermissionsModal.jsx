@@ -157,3 +157,4 @@ export default function PermissionsModal({ isOpen, file, onClose, onApply }) {
     </div>
   );
 }
+

@@ -37,3 +37,4 @@ contextBridge.exposeInMainWorld('skydeck', {
     writeText: (text) => ipcRenderer.invoke('clipboard:write-text', { text }),
   },
 });
+

@@ -356,3 +356,4 @@ export default function SettingsModal({ isOpen, onClose, onResetApp, onToast }) 
     </div>
   );
 }
+

@@ -84,3 +84,4 @@ func LoggingMiddleware(logger *log.Logger) gin.HandlerFunc {
 		logger.Println(msg)
 	}
 }
+

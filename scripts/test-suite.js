@@ -118,3 +118,4 @@ console.log('  ✓ AES-256-GCM encryption, decryption and authentication tag ver
 console.log('====================================================');
 console.log('          ALL SECURITY TESTS PASSED!                ');
 console.log('====================================================');
+

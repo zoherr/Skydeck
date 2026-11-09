@@ -23,3 +23,4 @@ npx electron-builder
 echo "========================================================"
 echo " Build complete! Artifacts available in dist/"
 echo "========================================================"
+
