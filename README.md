@@ -46,6 +46,15 @@
 
 ---
 
+## 🗺️ Product Roadmap & Specifications
+
+- 📄 [**Skydeck v1.0.1 Release Notes**](docs/v1.0.1.md) — Initial remote file management release.
+- 🚀 [**Skydeck v2.0.0 Release Notes**](docs/v2.0.0.md) — Secure desktop application with Monaco Editor, AES-256-GCM encryption, and Windows installer.
+- ⚡ [**Skydeck v2.5.0 Specification**](docs/v2.5.0.md) — *Productivity & Power Tools*: Integrated SSH PTY terminal, dual-pane explorer, content grep search, rich file previews, and resumable transfer manager.
+- 🌐 [**Skydeck v3.0.0 Architecture**](docs/v3.0.0.md) — *Complete VPS Management Platform*: Real-time server telemetry, process manager, Docker management, systemd service control, database explorer, and security center.
+
+---
+
 ## 🔒 Security Model
 
 1. **App Password Protection**:
