@@ -1,0 +1,55 @@
+{
+  "name": "skydeck",
+  "version": "2.0.0",
+  "description": "Your servers from above. A fast, secure VPS file manager.",
+  "main": "electron/main.js",
+  "author": "Skydeck Team",
+  "scripts": {
+    "dev": "electron .",
+    "build:backend": "cd backend && go build -ldflags=\"-s -w\" -o ../electron/bin/skydeck-backend.exe",
+    "build:frontend": "cd frontend && npm run build",
+    "build": "npm run build:backend && npm run build:frontend && electron-builder --win"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.skydeck.app",
+    "productName": "Skydeck",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "frontend/dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "electron/bin",
+        "to": "bin",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "forceCodeSigning": false,
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "signAndEditExecutable": false,
+      "artifactName": "${productName}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
