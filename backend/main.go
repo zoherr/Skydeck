@@ -157,6 +157,9 @@ func main() {
 		// Text Editor
 		api.GET("/read", handlers.ReadFileHandler)
 		api.POST("/write", handlers.WriteFileHandler)
+
+		// Interactive SSH Terminal (PTY Stream)
+		api.GET("/terminal/ws", handlers.WebSocketTerminalHandler)
 	}
 
 	// Strictly bind to 127.0.0.1 ONLY (never 0.0.0.0)

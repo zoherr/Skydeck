@@ -11,6 +11,9 @@ jobs:
   test:
     name: Run Test Suite
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -40,6 +43,9 @@ jobs:
     name: Build & Package Windows Installer
     needs: test
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -82,4 +88,3 @@ jobs:
           name: Skydeck-Windows-Installer
           path: dist/Skydeck-Setup.exe
           if-no-files-found: error
-
