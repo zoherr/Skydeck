@@ -217,5 +217,48 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId, path, mode }),
     }),
+
+  // Terminal WebSocket URL
+  getTerminalWsUrl: async (sessionId) => {
+    const token = await getBackendAuthToken();
+    const wsBase = backendBaseUrl.replace(/^http/, 'ws');
+    return `${wsBase}/api/terminal/ws?session_id=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(token)}`;
+  },
+
+  // v2.5.0 Power Tools
+  search: (sessionId, path, query, contentQuery = '', maxResults = 100) => {
+    const params = new URLSearchParams({
+      session_id: sessionId,
+      path: path || '/',
+      query: query || '',
+      content_query: contentQuery || '',
+      max_results: String(maxResults),
+    });
+    return request(`/api/search?${params.toString()}`);
+  },
+
+  extractArchive: (sessionId, archivePath, destDir = '') =>
+    request('/api/archive/extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, archive_path: archivePath, dest_dir: destDir }),
+    }),
+
+  createArchive: (sessionId, items, archivePath, format = 'zip') =>
+    request('/api/archive/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, items, archive_path: archivePath, format }),
+    }),
+
+  getDiskUsage: (sessionId, path = '/') =>
+    request(`/api/disk-usage?session_id=${encodeURIComponent(sessionId)}&path=${encodeURIComponent(path)}`),
+
+  copyItem: (sessionId, srcPath, destPath, move = false) =>
+    request('/api/copy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, src_path: srcPath, dest_path: destPath, move }),
+    }),
 };
 

@@ -393,7 +393,7 @@ ipcMain.handle('shell:open-logs', async () => {
 ipcMain.handle('app:get-info', async () => {
   return {
     name: 'Skydeck',
-    version: '2.0.0',
+    version: '2.5.0',
     platform: process.platform,
     userData: userDataPath,
     logsDir: logsDirPath,

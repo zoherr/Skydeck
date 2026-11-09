@@ -10,6 +10,8 @@ import {
   HardDrive,
   Edit2,
   Check,
+  Terminal,
+  Columns2,
 } from 'lucide-react';
 
 export default function TopBar({
@@ -22,6 +24,12 @@ export default function TopBar({
   searchQuery,
   onSearchChange,
   loading,
+  isTerminalOpen,
+  onToggleTerminal,
+  isDualPane,
+  onToggleDualPane,
+  onOpenSearchModal,
+  onOpenDiskUsage,
 }) {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -164,9 +172,9 @@ export default function TopBar({
       </div>
 
       {/* Action buttons + Search */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-1.5 shrink-0">
         {/* Search */}
-        <div className="relative w-44">
+        <div className="relative w-40">
           <Search className="w-3.5 h-3.5 text-textMuted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
@@ -185,6 +193,44 @@ export default function TopBar({
           )}
         </div>
 
+        {/* Advanced Remote Search Button */}
+        <button
+          onClick={onOpenSearchModal}
+          className="flex items-center gap-1 px-2.5 py-1 text-xs text-textMuted hover:text-textPrimary bg-surface-2 hover:bg-border/60 border border-border rounded-btn transition-hover"
+          title="Deep File & Content Search (Grep)"
+        >
+          <Search className="w-3.5 h-3.5 text-accent" />
+          <span>Find</span>
+        </button>
+
+        {/* Dual Pane Toggle */}
+        <button
+          onClick={onToggleDualPane}
+          className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium border rounded-btn transition-all ${
+            isDualPane
+              ? 'bg-accent/20 border-accent text-accent'
+              : 'bg-surface-2 border-border text-textMuted hover:text-textPrimary hover:bg-border/60'
+          }`}
+          title="Toggle Dual-Pane Explorer"
+        >
+          <Columns2 className="w-3.5 h-3.5" />
+          <span>Dual Pane</span>
+        </button>
+
+        {/* Terminal Toggle */}
+        <button
+          onClick={onToggleTerminal}
+          className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium border rounded-btn transition-all ${
+            isTerminalOpen
+              ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+              : 'bg-surface-2 border-border text-textMuted hover:text-textPrimary hover:bg-border/60'
+          }`}
+          title="Toggle SSH Terminal (Ctrl+`)"
+        >
+          <Terminal className="w-3.5 h-3.5" />
+          <span>Terminal</span>
+        </button>
+
         {/* Refresh */}
         <button
           onClick={onRefresh}
@@ -198,17 +244,17 @@ export default function TopBar({
         {/* New Folder */}
         <button
           onClick={() => setIsCreatingFolder(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-textPrimary bg-surface-2 hover:bg-border/60 border border-border rounded-btn transition-hover"
+          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-textPrimary bg-surface-2 hover:bg-border/60 border border-border rounded-btn transition-hover"
           title="New Folder"
         >
           <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
-          <span>New Folder</span>
+          <span>Folder</span>
         </button>
 
         {/* Upload Button */}
         <button
           onClick={onUploadClick}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-accent hover:bg-accent-hover rounded-btn transition-hover shadow-sm"
+          className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-white bg-accent hover:bg-accent-hover rounded-btn transition-hover shadow-sm"
           title="Upload Files"
         >
           <UploadCloud className="w-3.5 h-3.5" />

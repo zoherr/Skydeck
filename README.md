@@ -1,6 +1,6 @@
 # Skydeck
 
-> **Skydeck** is a fast, secure cross-platform VPS file manager combining a high-performance Go SSH/SFTP backend with an Electron and React desktop experience. It provides visual remote file operations, Monaco-powered in-app editing, and multi-layer encryption without needing a terminal.
+> **Skydeck** is a fast, secure cross-platform VPS workstation combining a high-performance Go SSH/SFTP backend with an Electron and React desktop experience. It provides visual remote file operations, an integrated SSH terminal, dual-pane browsing, Monaco-powered in-app editing, deep grep search, and multi-layer encryption without context switching.
 
 ---
 
@@ -8,17 +8,20 @@
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│  Skydeck v2.0.0                      [ - ] [ □ ] [ ✕ ]                 │
+│  Skydeck v2.5.0                      [ - ] [ □ ] [ ✕ ]                 │
 ├───────────────┬────────────────────────────────────────────────────────┤
-│ 🖥️ Production │  /var/www/html/                                        │
-│   192.168.1.1 │  [+ New Folder]  [↑ Upload]  [🔍 Search...]            │
+│ 🖥️ Production │  /var/www/html/              [🔍 Find] [Dual] [Terminal]│
+│   192.168.1.1 │  [+ Folder]  [↑ Upload]  [Filter...]                   │
 │   root : 22   ├────────────────────────────────────────────────────────┤
 │   ● active    │  Name            Size       Modified      Permissions  │
 │               │  📁 assets       —          Today 14:20   0755 drwxr-xr│
 │ 📁 Staging    │  📄 index.html   14.2 KB    Today 14:18   0644 -rw-r--r│
 │ 📁 Backup     │  📄 config.json  2.1 KB     Yesterday     0600 -rw-----│
-│               │  📄 app.js       88.4 KB    Nov 08        0644 -rw-r--r│
-│ [⚙️ Settings] │                                                        │
+│               ├────────────────────────────────────────────────────────┤
+│ 🔖 Bookmarks  │ >_ SSH Shell (Terminal 1)                              │
+│   /var/www    │ root@vps:~# uname -a                                   │
+│   /etc/nginx  │ Linux skydeck-server 6.1.0-x86_64 GNU/Linux            │
+│ [⚙️ Settings] │ root@vps:~# _                                          │
 └───────────────┴────────────────────────────────────────────────────────┘
 ```
 
@@ -27,10 +30,10 @@
 ## 🏗️ Architecture & Tech Stack
 
 ```
-[ Electron Frontend (React + Tailwind + Monaco) ]
-                    ↕ REST API (127.0.0.1:48921 with crypto token)
-[ Embedded Go Backend (Gin + crypto/ssh + pkg/sftp) ]
-                    ↕ SSH / SFTP
+[ Electron Frontend (React + Tailwind + Monaco + xterm.js) ]
+                    ↕ REST API & WebSockets (127.0.0.1:48921 with crypto token)
+[ Embedded Go Backend (Gin + crypto/ssh + pkg/sftp + gorilla/websocket) ]
+                    ↕ SSH / SFTP / PTY Stream
 [ Remote VPS Server ]
 ```
 
@@ -38,9 +41,11 @@
 |---|---|---|
 | **Desktop Shell** | Electron 33 | Isolated context, sandboxed renderer, secure preload IPC |
 | **Frontend UI** | React 18 + Tailwind CSS | Custom dark theme (`#0a0c10`), Inter font, Lucide icons |
+| **Terminal** | `xterm.js` + FitAddon | Full TrueColor SSH PTY terminal with multi-tabs & resize |
 | **Code Editor** | Monaco Editor | Syntax highlighting, line numbers, unsaved indicators, Ctrl+S |
-| **Backend Server** | Go 1.26 + Gin HTTP | High-concurrency, strictly bound to `127.0.0.1:48921` |
+| **Backend Server** | Go 1.22+ + Gin HTTP | High-concurrency, strictly bound to `127.0.0.1:48921` |
 | **Remote Protocol** | `golang.org/x/crypto/ssh` + `pkg/sftp` | SSH2 & SFTP connection multiplexing with auto-reconnect |
+| **Power Tools** | Go Search + Archive + Disk Usage | Server-side grep, find, zip/tar creation & extraction |
 | **Storage Security** | AES-256-GCM + PBKDF2 + bcrypt | Profiles encrypted at rest; master password lockout policy |
 | **Packaging** | electron-builder | Windows NSIS installer (`.exe`) with embedded binary |
 

@@ -160,6 +160,13 @@ func main() {
 
 		// Interactive SSH Terminal (PTY Stream)
 		api.GET("/terminal/ws", handlers.WebSocketTerminalHandler)
+
+		// Power Tools & Utilities (v2.5.0)
+		api.GET("/search", handlers.SearchHandler)
+		api.POST("/archive/extract", handlers.ExtractArchiveHandler)
+		api.POST("/archive/create", handlers.CreateArchiveHandler)
+		api.GET("/disk-usage", handlers.DiskUsageHandler)
+		api.POST("/copy", handlers.CopyItemHandler)
 	}
 
 	// Strictly bind to 127.0.0.1 ONLY (never 0.0.0.0)

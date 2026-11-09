@@ -21,7 +21,48 @@ export default function App() {
   const [connectLoading, setConnectLoading] = useState(false);
   const [connectError, setConnectError] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isDiskUsageOpen, setIsDiskUsageOpen] = useState(false);
   const [toast, setToast] = useState(null);
+
+  // Bookmarks
+  const [bookmarks, setBookmarks] = useState(() => {
+    try {
+      const stored = localStorage.getItem('skydeck:bookmarks');
+      return stored ? JSON.parse(stored) : ['/var/www', '/etc', '/var/log'];
+    } catch {
+      return ['/var/www', '/etc', '/var/log'];
+    }
+  });
+
+  const handleAddBookmark = (path) => {
+    if (!bookmarks.includes(path)) {
+      const updated = [...bookmarks, path];
+      setBookmarks(updated);
+      localStorage.setItem('skydeck:bookmarks', JSON.stringify(updated));
+      setToast({
+        type: 'success',
+        title: 'Bookmark added',
+        message: `Saved ${path} to bookmarks`,
+      });
+    } else {
+      setToast({
+        type: 'info',
+        title: 'Already bookmarked',
+        message: `${path} is already in your bookmarks`,
+      });
+    }
+  };
+
+  const handleRemoveBookmark = (path) => {
+    const updated = bookmarks.filter((b) => b !== path);
+    setBookmarks(updated);
+    localStorage.setItem('skydeck:bookmarks', JSON.stringify(updated));
+    setToast({
+      type: 'info',
+      title: 'Bookmark removed',
+      message: `Removed ${path} from bookmarks`,
+    });
+  };
 
   // Check initial master password configuration
   useEffect(() => {
@@ -223,6 +264,9 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onLockApp={handleLockApp}
         onDeleteProfile={handleDeleteProfile}
+        bookmarks={bookmarks}
+        onRemoveBookmark={handleRemoveBookmark}
+        onOpenDiskUsage={() => setIsDiskUsageOpen(true)}
       />
 
       {/* Main Screen Content */}
@@ -240,6 +284,10 @@ export default function App() {
             activeSession={activeSession}
             navTarget={navTarget}
             onToast={setToast}
+            bookmarks={bookmarks}
+            onBookmark={handleAddBookmark}
+            isDiskUsageOpen={isDiskUsageOpen}
+            setIsDiskUsageOpen={setIsDiskUsageOpen}
           />
         )}
       </main>

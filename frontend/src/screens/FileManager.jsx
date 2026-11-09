@@ -7,10 +7,24 @@ import ImagePreviewModal from '../components/ImagePreviewModal';
 import PermissionsModal from '../components/PermissionsModal';
 import UploadProgress from '../components/UploadProgress';
 import ConfirmDialog from '../components/ConfirmDialog';
+import TerminalPanel from '../components/TerminalPanel';
+import SearchModal from '../components/SearchModal';
+import DiskUsageModal from '../components/DiskUsageModal';
+import ArchiveModal from '../components/ArchiveModal';
 import { api } from '../utils/api';
 import { getFileExtension } from '../utils/format';
+import { ArrowLeft, HardDrive, RefreshCw } from 'lucide-react';
 
-export default function FileManager({ activeSession, navTarget, onToast }) {
+export default function FileManager({
+  activeSession,
+  navTarget,
+  onToast,
+  bookmarks = [],
+  onBookmark,
+  isDiskUsageOpen,
+  setIsDiskUsageOpen,
+}) {
+  // Primary Pane State
   const [currentPath, setCurrentPath] = useState(activeSession?.initial_path || '/');
   const [parentPath, setParentPath] = useState('/');
   const [entries, setEntries] = useState([]);
@@ -18,8 +32,30 @@ export default function FileManager({ activeSession, navTarget, onToast }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
 
+  // Secondary Pane State (for Dual-Pane mode)
+  const [isDualPane, setIsDualPane] = useState(false);
+  const [secondaryPath, setSecondaryPath] = useState('/');
+  const [secondaryParentPath, setSecondaryParentPath] = useState('/');
+  const [secondaryEntries, setSecondaryEntries] = useState([]);
+  const [secondaryLoading, setSecondaryLoading] = useState(false);
+  const [secondarySelectedFile, setSecondarySelectedFile] = useState(null);
+  const [activePane, setActivePane] = useState('primary'); // 'primary' | 'secondary'
+
+  // Terminal Drawer State
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
+
+  // Search Modal State
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Archive Modal State
+  const [archiveModal, setArchiveModal] = useState({
+    isOpen: false,
+    mode: 'extract', // 'extract' | 'compress'
+    targetItem: null,
+  });
+
   // Context Menu state
-  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, file: null });
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, file: null, pane: 'primary' });
 
   // Inline Rename
   const [renamingFile, setRenamingFile] = useState(null);
@@ -50,7 +86,7 @@ export default function FileManager({ activeSession, navTarget, onToast }) {
 
   const uploadInputRef = useRef(null);
 
-  // Fetch directory listing
+  // Fetch Primary Directory Listing
   const fetchDirectory = async (targetPath) => {
     if (!activeSession) return;
     setLoading(true);
@@ -71,16 +107,107 @@ export default function FileManager({ activeSession, navTarget, onToast }) {
     }
   };
 
+  // Fetch Secondary Directory Listing (Dual Pane)
+  const fetchSecondaryDirectory = async (targetPath) => {
+    if (!activeSession) return;
+    setSecondaryLoading(true);
+    try {
+      const data = await api.listFiles(activeSession.session_id, targetPath);
+      setSecondaryPath(data.path);
+      setSecondaryParentPath(data.parent_path);
+      setSecondaryEntries(data.entries || []);
+      setSecondarySelectedFile(null);
+    } catch (err) {
+      onToast({
+        type: 'error',
+        title: 'Secondary pane error',
+        message: err.message,
+      });
+    } finally {
+      setSecondaryLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchDirectory(currentPath);
   }, [activeSession]);
 
-  // Handle external navigation target from Sidebar Quick Locations
+  useEffect(() => {
+    if (isDualPane && secondaryEntries.length === 0) {
+      fetchSecondaryDirectory(secondaryPath);
+    }
+  }, [isDualPane]);
+
+  // Handle external navigation target from Sidebar Quick Locations or Bookmarks
   useEffect(() => {
     if (navTarget) {
-      fetchDirectory(navTarget);
+      if (activePane === 'secondary') {
+        fetchSecondaryDirectory(navTarget);
+      } else {
+        fetchDirectory(navTarget);
+      }
     }
   }, [navTarget]);
+
+  // Keyboard shortcut listener: Ctrl+` toggles terminal, F5 copies to other pane
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl+` or Ctrl+~
+      if (e.ctrlKey && (e.key === '`' || e.key === '~')) {
+        e.preventDefault();
+        setIsTerminalOpen((prev) => !prev);
+      }
+      // F5 in dual pane copies selected item to other pane
+      if (e.key === 'F5' && isDualPane) {
+        e.preventDefault();
+        handleCrossPaneTransfer(false);
+      }
+      // F6 moves selected item to other pane
+      if (e.key === 'F6' && isDualPane) {
+        e.preventDefault();
+        handleCrossPaneTransfer(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDualPane, selectedFile, secondarySelectedFile, activePane, currentPath, secondaryPath]);
+
+  // Cross pane copy or move
+  const handleCrossPaneTransfer = async (isMove) => {
+    const srcFile = activePane === 'primary' ? selectedFile : secondarySelectedFile;
+    const destDir = activePane === 'primary' ? secondaryPath : currentPath;
+
+    if (!srcFile) {
+      onToast({
+        type: 'info',
+        title: 'No item selected',
+        message: 'Select a file to transfer to the opposite pane.',
+      });
+      return;
+    }
+
+    const targetDestPath = destDir.endsWith('/')
+      ? `${destDir}${srcFile.name}`
+      : `${destDir}/${srcFile.name}`;
+
+    try {
+      await api.copyItem(activeSession.session_id, srcFile.path, targetDestPath, isMove);
+      onToast({
+        type: 'success',
+        title: isMove ? 'Item Moved' : 'Item Copied',
+        message: `${srcFile.name} transferred to ${destDir}`,
+      });
+      fetchDirectory(currentPath);
+      fetchSecondaryDirectory(secondaryPath);
+    } catch (err) {
+      onToast({
+        type: 'error',
+        title: 'Transfer failed',
+        message: err.message,
+      });
+    }
+  };
 
   // Open file in Editor or Image Preview
   const handleOpenFile = async (file) => {
@@ -117,6 +244,7 @@ export default function FileManager({ activeSession, navTarget, onToast }) {
         message: `${path} saved to server.`,
       });
       fetchDirectory(currentPath);
+      if (isDualPane) fetchSecondaryDirectory(secondaryPath);
     } catch (err) {
       onToast({
         type: 'error',
@@ -152,32 +280,59 @@ export default function FileManager({ activeSession, navTarget, onToast }) {
     setConfirmDialog({
       isOpen: true,
       title: `Delete ${file.is_dir ? 'Directory' : 'File'}`,
-      message: `Are you sure you want to permanently delete "${file.name}"? This action cannot be reversed.`,
+      message: `Are you sure you want to permanently delete "${file.name}"? This action cannot be undone on the server.`,
       onConfirm: async () => {
-        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
         try {
           await api.deleteItem(activeSession.session_id, file.path, file.is_dir);
           onToast({
-            type: 'info',
+            type: 'success',
             title: 'Deleted',
-            message: `${file.name} has been deleted.`,
+            message: `${file.name} removed from server.`,
           });
           fetchDirectory(currentPath);
+          if (isDualPane) fetchSecondaryDirectory(secondaryPath);
         } catch (err) {
           onToast({
             type: 'error',
             title: 'Delete failed',
             message: err.message,
           });
+        } finally {
+          setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
         }
       },
     });
   };
 
+  // Duplicate
+  const handleDuplicate = async (file) => {
+    const parentDir = currentPath.endsWith('/') ? currentPath : `${currentPath}/`;
+    const copyPath = `${parentDir}${file.name}.copy`;
+    try {
+      await api.copyItem(activeSession.session_id, file.path, copyPath, false);
+      onToast({
+        type: 'success',
+        title: 'Duplicated',
+        message: `Created copy: ${file.name}.copy`,
+      });
+      fetchDirectory(currentPath);
+    } catch (err) {
+      onToast({
+        type: 'error',
+        title: 'Duplicate failed',
+        message: err.message,
+      });
+    }
+  };
+
   // Rename
   const handleRenameSubmit = async (file, newName) => {
+    if (!newName || newName === file.name) {
+      setRenamingFile(null);
+      return;
+    }
     const parent = file.path.substring(0, file.path.lastIndexOf('/'));
-    const newPath = (parent === '' ? '/' : parent) + (parent.endsWith('/') ? '' : '/') + newName;
+    const newPath = parent ? `${parent}/${newName}` : `/${newName}`;
 
     try {
       await api.renameItem(activeSession.session_id, file.path, newPath);
@@ -186,7 +341,9 @@ export default function FileManager({ activeSession, navTarget, onToast }) {
         title: 'Renamed',
         message: `Renamed to ${newName}`,
       });
+      setRenamingFile(null);
       fetchDirectory(currentPath);
+      if (isDualPane) fetchSecondaryDirectory(secondaryPath);
     } catch (err) {
       onToast({
         type: 'error',
@@ -196,36 +353,77 @@ export default function FileManager({ activeSession, navTarget, onToast }) {
     }
   };
 
-  // Create Folder
+  // Create folder
   const handleCreateFolder = async (folderName) => {
-    const newPath = (currentPath.endsWith('/') ? currentPath : currentPath + '/') + folderName;
+    const target = currentPath.endsWith('/')
+      ? `${currentPath}${folderName}`
+      : `${currentPath}/${folderName}`;
     try {
-      await api.createFolder(activeSession.session_id, newPath);
+      await api.createFolder(activeSession.session_id, target);
       onToast({
         type: 'success',
-        title: 'Folder created',
-        message: `Created folder ${folderName}`,
+        title: 'Directory created',
+        message: `Created ${folderName}`,
       });
       fetchDirectory(currentPath);
     } catch (err) {
       onToast({
         type: 'error',
-        title: 'Failed to create folder',
+        title: 'Failed to create directory',
         message: err.message,
       });
     }
   };
 
-  // Chmod
-  const handleApplyChmod = async (path, mode) => {
+  // Upload files
+  const handleUploadFiles = async (files) => {
+    if (!files || files.length === 0) return;
+
+    setUploadProgress({
+      isUploading: true,
+      percent: 0,
+      loaded: 0,
+      total: Array.from(files).reduce((acc, f) => acc + f.size, 0),
+    });
+
     try {
-      await api.chmod(activeSession.session_id, path, mode);
-      setIsChmodOpen(false);
+      await api.uploadFiles(activeSession.session_id, currentPath, files, (prog) => {
+        setUploadProgress({
+          isUploading: true,
+          ...prog,
+        });
+      });
+
       onToast({
         type: 'success',
-        title: 'Permissions changed',
-        message: `Updated permissions of ${chmodFile.name} to ${mode}`,
+        title: 'Upload complete',
+        message: `Uploaded ${files.length} file(s) to ${currentPath}`,
       });
+      fetchDirectory(currentPath);
+    } catch (err) {
+      onToast({
+        type: 'error',
+        title: 'Upload failed',
+        message: err.message,
+      });
+    } finally {
+      setTimeout(() => {
+        setUploadProgress({ isUploading: false, percent: 0, loaded: 0, total: 0 });
+      }, 600);
+    }
+  };
+
+  // Apply Permissions
+  const handleApplyChmod = async (mode) => {
+    if (!chmodFile) return;
+    try {
+      await api.chmod(activeSession.session_id, chmodFile.path, mode);
+      onToast({
+        type: 'success',
+        title: 'Permissions updated',
+        message: `${chmodFile.name} set to ${mode}`,
+      });
+      setIsChmodOpen(false);
       fetchDirectory(currentPath);
     } catch (err) {
       onToast({
@@ -237,70 +435,42 @@ export default function FileManager({ activeSession, navTarget, onToast }) {
   };
 
   // Copy Path
-  const handleCopyPath = (file) => {
-    if (window.skydeck && window.skydeck.clipboard) {
-      window.skydeck.clipboard.writeText(file.path);
-    } else {
-      navigator.clipboard.writeText(file.path);
-    }
-    onToast({
-      type: 'info',
-      title: 'Copied to clipboard',
-      message: file.path,
-    });
-  };
-
-  // Upload handler
-  const handleUploadFiles = async (files) => {
-    if (!files || files.length === 0) return;
-
-    setUploadProgress({
-      isUploading: true,
-      percent: 0,
-      loaded: 0,
-      total: 0,
-      filename: files.length === 1 ? files[0].name : `${files.length} files`,
-    });
-
+  const handleCopyPath = async (file) => {
     try {
-      await api.uploadFiles(
-        activeSession.session_id,
-        currentPath,
-        files,
-        ({ loaded, total, percent }) => {
-          setUploadProgress((prev) => ({
-            ...prev,
-            loaded,
-            total,
-            percent,
-          }));
-        }
-      );
-
+      if (window.skydeck && window.skydeck.clipboard) {
+        await window.skydeck.clipboard.writeText(file.path);
+      } else {
+        await navigator.clipboard.writeText(file.path);
+      }
       onToast({
         type: 'success',
-        title: 'Upload complete',
-        message: `Successfully uploaded ${files.length} file(s) to ${currentPath}`,
+        title: 'Copied to clipboard',
+        message: file.path,
       });
-      fetchDirectory(currentPath);
     } catch (err) {
       onToast({
         type: 'error',
-        title: 'Upload failed',
+        title: 'Failed to copy path',
         message: err.message,
       });
-    } finally {
-      setUploadProgress({ isUploading: false, percent: 0, loaded: 0, total: 0 });
     }
   };
 
   // Context Menu trigger
-  const handleContextMenu = (e, file) => {
+  const handleContextMenu = (e, file, pane = 'primary') => {
+    e.preventDefault();
+    setActivePane(pane);
+    if (pane === 'primary') {
+      setSelectedFile(file);
+    } else {
+      setSecondarySelectedFile(file);
+    }
     setContextMenu({
       visible: true,
       x: e.clientX,
       y: e.clientY,
       file,
+      pane,
     });
   };
 
@@ -322,6 +492,12 @@ export default function FileManager({ activeSession, navTarget, onToast }) {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         loading={loading}
+        isTerminalOpen={isTerminalOpen}
+        onToggleTerminal={() => setIsTerminalOpen(!isTerminalOpen)}
+        isDualPane={isDualPane}
+        onToggleDualPane={() => setIsDualPane(!isDualPane)}
+        onOpenSearchModal={() => setIsSearchOpen(true)}
+        onOpenDiskUsage={() => setIsDiskUsageOpen(true)}
       />
 
       {/* Hidden file input for uploads */}
@@ -338,21 +514,107 @@ export default function FileManager({ activeSession, navTarget, onToast }) {
         className="hidden"
       />
 
-      {/* File List Table with drag & drop */}
-      <FileList
-        entries={filteredEntries}
-        loading={loading}
-        selectedFile={selectedFile}
-        currentPath={currentPath}
-        parentPath={parentPath}
-        onSelectFile={setSelectedFile}
-        onOpenFolder={fetchDirectory}
-        onOpenFile={handleOpenFile}
-        onContextMenu={handleContextMenu}
-        onRenameSubmit={handleRenameSubmit}
-        renamingFile={renamingFile}
-        setRenamingFile={setRenamingFile}
-        onDropFiles={handleUploadFiles}
+      {/* Main File Browser Area (Single vs Dual Pane) */}
+      <div className="flex-1 flex min-h-0 overflow-hidden relative">
+        {/* Left / Primary Pane */}
+        <div
+          className={`flex-1 flex flex-col min-w-0 h-full ${
+            isDualPane ? 'border-r border-border' : ''
+          }`}
+          onClick={() => setActivePane('primary')}
+        >
+          {isDualPane && (
+            <div className="flex items-center justify-between px-3 py-1 bg-surface-2/60 border-b border-border text-xs text-textMuted select-none">
+              <div className="flex items-center gap-1.5 font-mono truncate">
+                <span className="w-2 h-2 rounded-full bg-accent" />
+                <span className="font-semibold text-textPrimary">Pane 1:</span>
+                <span className="truncate">{currentPath}</span>
+              </div>
+              <button
+                onClick={() => fetchDirectory(currentPath)}
+                className="p-1 hover:text-textPrimary rounded"
+                title="Refresh Pane 1"
+              >
+                <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin text-accent' : ''}`} />
+              </button>
+            </div>
+          )}
+
+          <FileList
+            entries={filteredEntries}
+            loading={loading}
+            selectedFile={selectedFile}
+            currentPath={currentPath}
+            parentPath={parentPath}
+            onSelectFile={setSelectedFile}
+            onOpenFolder={fetchDirectory}
+            onOpenFile={handleOpenFile}
+            onContextMenu={(e, file) => handleContextMenu(e, file, 'primary')}
+            onRenameSubmit={handleRenameSubmit}
+            renamingFile={renamingFile}
+            setRenamingFile={setRenamingFile}
+            onDropFiles={handleUploadFiles}
+          />
+        </div>
+
+        {/* Right / Secondary Pane (Dual Pane mode) */}
+        {isDualPane && (
+          <div
+            className="flex-1 flex flex-col min-w-0 h-full bg-background"
+            onClick={() => setActivePane('secondary')}
+          >
+            <div className="flex items-center justify-between px-3 py-1 bg-surface-2/60 border-b border-border text-xs text-textMuted select-none">
+              <div className="flex items-center gap-1.5 font-mono truncate">
+                <span className="w-2 h-2 rounded-full bg-purple-400" />
+                <span className="font-semibold text-textPrimary">Pane 2:</span>
+                <span className="truncate">{secondaryPath}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {secondaryParentPath && (
+                  <button
+                    onClick={() => fetchSecondaryDirectory(secondaryParentPath)}
+                    className="p-1 hover:text-textPrimary rounded"
+                    title={`Back to ${secondaryParentPath}`}
+                  >
+                    <ArrowLeft className="w-3 h-3" />
+                  </button>
+                )}
+                <button
+                  onClick={() => fetchSecondaryDirectory(secondaryPath)}
+                  className="p-1 hover:text-textPrimary rounded"
+                  title="Refresh Pane 2"
+                >
+                  <RefreshCw
+                    className={`w-3 h-3 ${secondaryLoading ? 'animate-spin text-accent' : ''}`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <FileList
+              entries={secondaryEntries}
+              loading={secondaryLoading}
+              selectedFile={secondarySelectedFile}
+              currentPath={secondaryPath}
+              parentPath={secondaryParentPath}
+              onSelectFile={setSecondarySelectedFile}
+              onOpenFolder={fetchSecondaryDirectory}
+              onOpenFile={handleOpenFile}
+              onContextMenu={(e, file) => handleContextMenu(e, file, 'secondary')}
+              onRenameSubmit={handleRenameSubmit}
+              renamingFile={renamingFile}
+              setRenamingFile={setRenamingFile}
+              onDropFiles={(files) => api.uploadFiles(activeSession.session_id, secondaryPath, files)}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Integrated SSH Terminal Drawer */}
+      <TerminalPanel
+        session={activeSession}
+        isOpen={isTerminalOpen}
+        onClose={() => setIsTerminalOpen(false)}
       />
 
       {/* Context Menu */}
@@ -361,7 +623,7 @@ export default function FileManager({ activeSession, navTarget, onToast }) {
           x={contextMenu.x}
           y={contextMenu.y}
           file={contextMenu.file}
-          onClose={() => setContextMenu({ visible: false, x: 0, y: 0, file: null })}
+          onClose={() => setContextMenu({ visible: false, x: 0, y: 0, file: null, pane: 'primary' })}
           onDownload={handleDownload}
           onRename={(file) => setRenamingFile(file)}
           onCopyPath={handleCopyPath}
@@ -370,8 +632,74 @@ export default function FileManager({ activeSession, navTarget, onToast }) {
             setIsChmodOpen(true);
           }}
           onDelete={handleDelete}
+          onDuplicate={handleDuplicate}
+          onBookmark={onBookmark}
+          onExtractArchive={(file) =>
+            setArchiveModal({
+              isOpen: true,
+              mode: 'extract',
+              targetItem: file,
+            })
+          }
+          onCompress={(file) =>
+            setArchiveModal({
+              isOpen: true,
+              mode: 'compress',
+              targetItem: file,
+            })
+          }
         />
       )}
+
+      {/* Advanced Search Modal */}
+      <SearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        session={activeSession}
+        currentPath={currentPath}
+        onNavigate={(path) => {
+          fetchDirectory(path);
+          setIsSearchOpen(false);
+        }}
+        onOpenFile={(file) => {
+          handleOpenFile(file);
+          setIsSearchOpen(false);
+        }}
+      />
+
+      {/* Disk Usage Modal */}
+      <DiskUsageModal
+        isOpen={isDiskUsageOpen}
+        onClose={() => setIsDiskUsageOpen(false)}
+        session={activeSession}
+        currentPath={currentPath}
+        onNavigate={(path) => {
+          fetchDirectory(path);
+          setIsDiskUsageOpen(false);
+        }}
+      />
+
+      {/* Archive Modal (Extract / Compress) */}
+      <ArchiveModal
+        isOpen={archiveModal.isOpen}
+        mode={archiveModal.mode}
+        targetItem={archiveModal.targetItem}
+        currentPath={currentPath}
+        session={activeSession}
+        onClose={() => setArchiveModal((prev) => ({ ...prev, isOpen: false }))}
+        onSuccess={() => {
+          onToast({
+            type: 'success',
+            title: 'Archive Completed',
+            message:
+              archiveModal.mode === 'extract'
+                ? 'Archive extracted successfully.'
+                : 'Archive created successfully.',
+          });
+          fetchDirectory(currentPath);
+          if (isDualPane) fetchSecondaryDirectory(secondaryPath);
+        }}
+      />
 
       {/* Text Editor Modal (Monaco) */}
       <EditorModal

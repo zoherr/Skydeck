@@ -13,6 +13,8 @@ import {
   FileText,
   Folder,
   ChevronRight,
+  Bookmark,
+  Activity,
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -25,6 +27,9 @@ export default function Sidebar({
   onLockApp,
   onDeleteProfile,
   onNavigate,
+  bookmarks = [],
+  onRemoveBookmark,
+  onOpenDiskUsage,
 }) {
   return (
     <aside className="w-64 bg-surface border-r border-border flex flex-col h-full select-none shrink-0">
@@ -38,8 +43,8 @@ export default function Sidebar({
             <div className="text-sm font-bold tracking-tight text-textPrimary leading-none">
               Skydeck
             </div>
-            <div className="text-[10px] text-textMuted font-mono leading-none mt-1">
-              v2.0.0 • VPS Manager
+            <div className="text-[10px] text-accent font-mono leading-none mt-1">
+              v2.5.0 • VPS Workstation
             </div>
           </div>
         </div>
@@ -96,8 +101,18 @@ export default function Sidebar({
       {/* Quick Locations (When Connected) */}
       {activeSession && onNavigate && (
         <div className="p-3 border-b border-border bg-surface/30">
-          <div className="text-[10px] font-semibold text-textMuted uppercase tracking-wider mb-2 px-1">
-            Quick Locations
+          <div className="flex items-center justify-between text-[10px] font-semibold text-textMuted uppercase tracking-wider mb-2 px-1">
+            <span>Quick Locations</span>
+            {onOpenDiskUsage && (
+              <button
+                onClick={onOpenDiskUsage}
+                className="text-[10px] text-accent hover:underline lowercase font-normal flex items-center gap-1"
+                title="Open Disk Usage Analyzer"
+              >
+                <Activity className="w-3 h-3" />
+                <span>storage</span>
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-1 text-xs">
             <button
@@ -149,6 +164,37 @@ export default function Sidebar({
               <span className="truncate font-medium">/tmp</span>
             </button>
           </div>
+
+          {/* Bookmarks */}
+          {bookmarks.length > 0 && (
+            <div className="mt-3 pt-2 border-t border-border/50">
+              <div className="text-[10px] font-semibold text-textMuted uppercase tracking-wider mb-1.5 px-1 flex items-center gap-1">
+                <Bookmark className="w-3 h-3 text-amber-400" />
+                <span>Bookmarks</span>
+              </div>
+              <div className="space-y-1">
+                {bookmarks.map((bm, idx) => (
+                  <div
+                    key={idx}
+                    className="group flex items-center justify-between px-2 py-1 rounded hover:bg-surface-2 cursor-pointer text-xs"
+                    onClick={() => onNavigate(bm)}
+                  >
+                    <span className="truncate font-mono text-textPrimary/90 max-w-[170px]">{bm}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveBookmark(bm);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-0.5 text-textMuted hover:text-rose-400"
+                      title="Remove bookmark"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

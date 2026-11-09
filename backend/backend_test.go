@@ -34,6 +34,13 @@ func setupTestRouter(token string) *gin.Engine {
 		api.POST("/chmod", handlers.ChmodHandler)
 		api.POST("/rename", handlers.RenameHandler)
 		api.POST("/delete", handlers.DeleteHandler)
+
+		// Power tools v2.5.0
+		api.GET("/search", handlers.SearchHandler)
+		api.POST("/archive/extract", handlers.ExtractArchiveHandler)
+		api.POST("/archive/create", handlers.CreateArchiveHandler)
+		api.GET("/disk-usage", handlers.DiskUsageHandler)
+		api.POST("/copy", handlers.CopyItemHandler)
 	}
 
 	return router
@@ -107,5 +114,48 @@ func TestInvalidConnectPayload(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("Expected 400 Bad Request for empty connect payload, got %d", w.Code)
+	}
+}
+
+func TestPowerToolsValidation(t *testing.T) {
+	token := "power_tools_test_token"
+	router := setupTestRouter(token)
+
+	// Test 1: Search without session_id -> 400
+	req1, _ := http.NewRequest(http.MethodGet, "/api/search?path=/", nil)
+	req1.Header.Set("X-Skydeck-Token", token)
+	w1 := httptest.NewRecorder()
+	router.ServeHTTP(w1, req1)
+	if w1.Code != http.StatusBadRequest {
+		t.Fatalf("Expected 400 Bad Request for search without session_id, got %d", w1.Code)
+	}
+
+	// Test 2: Disk usage without session_id -> 400
+	req2, _ := http.NewRequest(http.MethodGet, "/api/disk-usage?path=/", nil)
+	req2.Header.Set("X-Skydeck-Token", token)
+	w2 := httptest.NewRecorder()
+	router.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusBadRequest {
+		t.Fatalf("Expected 400 Bad Request for disk usage without session_id, got %d", w2.Code)
+	}
+
+	// Test 3: Extract archive without payload -> 400
+	req3, _ := http.NewRequest(http.MethodPost, "/api/archive/extract", bytes.NewBuffer([]byte("{}")))
+	req3.Header.Set("X-Skydeck-Token", token)
+	req3.Header.Set("Content-Type", "application/json")
+	w3 := httptest.NewRecorder()
+	router.ServeHTTP(w3, req3)
+	if w3.Code != http.StatusBadRequest {
+		t.Fatalf("Expected 400 Bad Request for invalid extract archive, got %d", w3.Code)
+	}
+
+	// Test 4: Copy without payload -> 400
+	req4, _ := http.NewRequest(http.MethodPost, "/api/copy", bytes.NewBuffer([]byte("{}")))
+	req4.Header.Set("X-Skydeck-Token", token)
+	req4.Header.Set("Content-Type", "application/json")
+	w4 := httptest.NewRecorder()
+	router.ServeHTTP(w4, req4)
+	if w4.Code != http.StatusBadRequest {
+		t.Fatalf("Expected 400 Bad Request for invalid copy payload, got %d", w4.Code)
 	}
 }
