@@ -3,12 +3,31 @@ import LockScreen from './screens/LockScreen';
 import SetPasswordScreen from './screens/SetPasswordScreen';
 import ConnectScreen from './screens/ConnectScreen';
 import FileManager from './screens/FileManager';
+import MonitorDashboard from './screens/v3/MonitorDashboard';
+import ProcessManager from './screens/v3/ProcessManager';
+import DockerManager from './screens/v3/DockerManager';
+import ServiceManager from './screens/v3/ServiceManager';
+import DatabaseExplorer from './screens/v3/DatabaseExplorer';
+import SecurityCenter from './screens/v3/SecurityCenter';
+import DeployUtilities from './screens/v3/DeployUtilities';
 import SettingsModal from './screens/SettingsModal';
 import Sidebar from './components/Sidebar';
+import TerminalPanel from './components/TerminalPanel';
 import Toast from './components/Toast';
 import { auth } from './utils/auth';
 import { profiles } from './utils/profiles';
 import { api } from './utils/api';
+import {
+  FolderOpen,
+  Activity,
+  Cpu,
+  Container,
+  Cog,
+  Database,
+  Rocket,
+  Shield,
+  Terminal as TerminalIcon,
+} from 'lucide-react';
 
 export default function App() {
   const [authState, setAuthState] = useState('checking'); // 'checking' | 'need_setup' | 'locked' | 'unlocked'
@@ -22,7 +41,26 @@ export default function App() {
   const [connectError, setConnectError] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDiskUsageOpen, setIsDiskUsageOpen] = useState(false);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
+  const [containerShellRequest, setContainerShellRequest] = useState(null);
   const [toast, setToast] = useState(null);
+
+  // Global Ctrl+` shortcut for persistent SSH Terminal Drawer
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (activeSession && e.ctrlKey && (e.key === '`' || e.key === '~')) {
+        e.preventDefault();
+        setIsTerminalOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeSession]);
+
+  const handleOpenContainerShell = (id, name) => {
+    setIsTerminalOpen(true);
+    setContainerShellRequest({ id, name, ts: Date.now() });
+  };
 
   // Bookmarks
   const [bookmarks, setBookmarks] = useState(() => {
@@ -280,15 +318,104 @@ export default function App() {
             savedProfiles={savedProfiles}
           />
         ) : (
-          <FileManager
-            activeSession={activeSession}
-            navTarget={navTarget}
-            onToast={setToast}
-            bookmarks={bookmarks}
-            onBookmark={handleAddBookmark}
-            isDiskUsageOpen={isDiskUsageOpen}
-            setIsDiskUsageOpen={setIsDiskUsageOpen}
-          />
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            {/* v3.0.0 Platform Workspace Mode Switcher */}
+            <div className="flex items-center justify-between px-4 py-1.5 bg-[#0f1117] border-b border-border select-none shrink-0 gap-2 overflow-x-auto scrollbar-none">
+              <div className="flex items-center gap-1">
+                {[
+                  { id: 'manager', label: 'Files', icon: FolderOpen, color: 'text-accent' },
+                  { id: 'monitor', label: 'Monitor', icon: Activity, color: 'text-emerald-400' },
+                  { id: 'processes', label: 'Processes', icon: Cpu, color: 'text-sky-400' },
+                  { id: 'docker', label: 'Docker', icon: Container, color: 'text-sky-400' },
+                  { id: 'services', label: 'Services & Cron', icon: Cog, color: 'text-purple-400' },
+                  { id: 'database', label: 'Databases', icon: Database, color: 'text-emerald-400' },
+                  { id: 'deploy', label: 'Deploy & Logs', icon: Rocket, color: 'text-amber-400' },
+                  { id: 'security', label: 'Security', icon: Shield, color: 'text-rose-400' },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  const isActive = currentView === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setCurrentView(item.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                        isActive
+                          ? 'bg-surface-2 text-textPrimary border border-border shadow-sm'
+                          : 'text-textMuted hover:text-textPrimary hover:bg-surface/60'
+                      }`}
+                    >
+                      <Icon className={`w-3.5 h-3.5 ${isActive ? item.color : ''}`} />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Persistent SSH Terminal Toggle */}
+              <button
+                onClick={() => setIsTerminalOpen((prev) => !prev)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all shrink-0 ${
+                  isTerminalOpen
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                    : 'bg-surface border-border text-textMuted hover:text-textPrimary'
+                }`}
+                title="Toggle Persistent SSH Shell (Ctrl+`)"
+              >
+                <TerminalIcon className="w-3.5 h-3.5" />
+                <span>Shell</span>
+              </button>
+            </div>
+
+            {/* Active Platform View */}
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              {currentView === 'manager' && (
+                <FileManager
+                  activeSession={activeSession}
+                  navTarget={navTarget}
+                  onToast={setToast}
+                  bookmarks={bookmarks}
+                  onBookmark={handleAddBookmark}
+                  isDiskUsageOpen={isDiskUsageOpen}
+                  setIsDiskUsageOpen={setIsDiskUsageOpen}
+                  isTerminalOpen={isTerminalOpen}
+                  onToggleTerminal={() => setIsTerminalOpen((prev) => !prev)}
+                />
+              )}
+              {currentView === 'monitor' && (
+                <MonitorDashboard session={activeSession} onToast={setToast} />
+              )}
+              {currentView === 'processes' && (
+                <ProcessManager session={activeSession} onToast={setToast} />
+              )}
+              {currentView === 'docker' && (
+                <DockerManager
+                  session={activeSession}
+                  onToast={setToast}
+                  onOpenContainerShell={handleOpenContainerShell}
+                />
+              )}
+              {currentView === 'services' && (
+                <ServiceManager session={activeSession} onToast={setToast} />
+              )}
+              {currentView === 'database' && (
+                <DatabaseExplorer session={activeSession} onToast={setToast} />
+              )}
+              {currentView === 'deploy' && (
+                <DeployUtilities session={activeSession} onToast={setToast} />
+              )}
+              {currentView === 'security' && (
+                <SecurityCenter session={activeSession} onToast={setToast} />
+              )}
+            </div>
+
+            {/* Persistent Global SSH Terminal Drawer (available on all v3 views) */}
+            <TerminalPanel
+              session={activeSession}
+              isOpen={isTerminalOpen}
+              onClose={() => setIsTerminalOpen(false)}
+              containerShellRequest={containerShellRequest}
+            />
+          </div>
         )}
       </main>
 

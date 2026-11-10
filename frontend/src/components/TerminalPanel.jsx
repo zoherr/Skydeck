@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { api } from '../utils/api';
 
-function TerminalTabInstance({ session, tabId, isActive, isExpanded }) {
+function TerminalTabInstance({ session, tabId, containerId, isActive, isExpanded }) {
   const containerRef = useRef(null);
   const termRef = useRef(null);
   const fitAddonRef = useRef(null);
@@ -26,7 +26,7 @@ function TerminalTabInstance({ session, tabId, isActive, isExpanded }) {
     setStatus('connecting');
 
     try {
-      const wsUrl = await api.getTerminalWsUrl(session.session_id);
+      const wsUrl = await api.getTerminalWsUrl(session.session_id, containerId || '');
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
@@ -201,16 +201,30 @@ function TerminalTabInstance({ session, tabId, isActive, isExpanded }) {
   );
 }
 
-export default function TerminalPanel({ session, isOpen, onClose }) {
-  const [tabs, setTabs] = useState([{ id: 1, title: 'Terminal 1' }]);
+export default function TerminalPanel({ session, isOpen, onClose, containerShellRequest }) {
+  const [tabs, setTabs] = useState([{ id: 1, title: 'Terminal 1', containerId: '' }]);
   const [activeTabId, setActiveTabId] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => {
+    if (containerShellRequest && containerShellRequest.id) {
+      const nextId = (tabs[tabs.length - 1]?.id || 0) + 1;
+      const label = containerShellRequest.name || containerShellRequest.id.slice(0, 12);
+      const newTab = {
+        id: nextId,
+        title: `🐳 ${label}`,
+        containerId: containerShellRequest.id,
+      };
+      setTabs((prev) => [...prev, newTab]);
+      setActiveTabId(nextId);
+    }
+  }, [containerShellRequest]);
 
   if (!isOpen) return null;
 
   const handleAddTab = () => {
     const nextId = (tabs[tabs.length - 1]?.id || 0) + 1;
-    const newTab = { id: nextId, title: `Terminal ${nextId}` };
+    const newTab = { id: nextId, title: `Terminal ${nextId}`, containerId: '' };
     setTabs([...tabs, newTab]);
     setActiveTabId(nextId);
   };
@@ -303,6 +317,7 @@ export default function TerminalPanel({ session, isOpen, onClose }) {
           <TerminalTabInstance
             key={tab.id}
             tabId={tab.id}
+            containerId={tab.containerId}
             session={session}
             isActive={tab.id === activeTabId}
             isExpanded={isExpanded}

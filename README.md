@@ -1,28 +1,26 @@
 # Skydeck
 
-> **Skydeck** is a fast, secure cross-platform VPS workstation combining a high-performance Go SSH/SFTP backend with an Electron and React desktop experience. It provides visual remote file operations, an integrated SSH terminal, dual-pane browsing, Monaco-powered in-app editing, deep grep search, and multi-layer encryption without context switching.
+> **Skydeck** is the complete, security-first VPS Management Platform combining a modular Go SSH/SFTP engine with an Electron and React desktop console. Manage remote files, edit code with Monaco, execute SSH & Docker shells, monitor CPU/RAM/Network telemetry, orchestrate systemd & containers, query databases over SSH, deploy Git apps, and audit firewalls from one unified app.
 
 ---
 
 ## 📸 Overview
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│  Skydeck v2.5.0                      [ - ] [ □ ] [ ✕ ]                 │
-├───────────────┬────────────────────────────────────────────────────────┤
-│ 🖥️ Production │  /var/www/html/              [🔍 Find] [Dual] [Terminal]│
-│   192.168.1.1 │  [+ Folder]  [↑ Upload]  [Filter...]                   │
-│   root : 22   ├────────────────────────────────────────────────────────┤
-│   ● active    │  Name            Size       Modified      Permissions  │
-│               │  📁 assets       —          Today 14:20   0755 drwxr-xr│
-│ 📁 Staging    │  📄 index.html   14.2 KB    Today 14:18   0644 -rw-r--r│
-│ 📁 Backup     │  📄 config.json  2.1 KB     Yesterday     0600 -rw-----│
-│               ├────────────────────────────────────────────────────────┤
-│ 🔖 Bookmarks  │ >_ SSH Shell (Terminal 1)                              │
-│   /var/www    │ root@vps:~# uname -a                                   │
-│   /etc/nginx  │ Linux skydeck-server 6.1.0-x86_64 GNU/Linux            │
-│ [⚙️ Settings] │ root@vps:~# _                                          │
-└───────────────┴────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│  Skydeck v3.0.0                          [ - ] [ □ ] [ ✕ ]                 │
+├───────────────┬────────────────────────────────────────────────────────────┤
+│ 🖥️ Production │  [Files] [Monitor] [Processes] [Docker] [Services] [DB] [🛡️]│
+│   192.168.1.1 ├────────────────────────────────────────────────────────────┤
+│   root : 22   │  CPU: 14.2% (8 Cores)  │  RAM: 3.2 GB / 16.0 GB (20%)     │
+│   ● active    │  Storage (/): 42%      │  Uptime: up 44 days, 12 hours    │
+│               ├────────────────────────────────────────────────────────────┤
+│ 🔖 Bookmarks  │  🐳 nginx-proxy    ● Up 12 days   [Shell] [Logs] [Restart] │
+│   /var/www    │  🐳 postgres-db    ● Up 12 days   [Shell] [Logs] [Restart] │
+│   /etc/nginx  ├────────────────────────────────────────────────────────────┤
+│               │ >_ SSH Shell | 🐳 nginx-proxy                              │
+│ [⚙️ Settings] │ root@vps:~# _                                              │
+└───────────────┴────────────────────────────────────────────────────────────┘
 ```
 
 ---

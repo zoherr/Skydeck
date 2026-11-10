@@ -143,7 +143,7 @@ function createWindow() {
     backgroundColor: '#0a0c10',
     autoHideMenuBar: true,
     show: false,
-    title: 'Skydeck — VPS File Manager',
+    title: 'Skydeck — Complete VPS Management Platform',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -393,7 +393,7 @@ ipcMain.handle('shell:open-logs', async () => {
 ipcMain.handle('app:get-info', async () => {
   return {
     name: 'Skydeck',
-    version: '2.5.0',
+    version: '3.0.0',
     platform: process.platform,
     userData: userDataPath,
     logsDir: logsDirPath,

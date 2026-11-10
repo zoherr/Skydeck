@@ -41,6 +41,24 @@ func setupTestRouter(token string) *gin.Engine {
 		api.POST("/archive/create", handlers.CreateArchiveHandler)
 		api.GET("/disk-usage", handlers.DiskUsageHandler)
 		api.POST("/copy", handlers.CopyItemHandler)
+
+		// v3.0.0 Complete VPS Platform
+		v3 := api.Group("/v3")
+		{
+			v3.GET("/telemetry", handlers.TelemetryHandler)
+			v3.GET("/processes", handlers.ProcessesListHandler)
+			v3.POST("/processes/kill", handlers.ProcessKillHandler)
+			v3.GET("/docker/overview", handlers.DockerOverviewHandler)
+			v3.POST("/docker/container/action", handlers.DockerContainerActionHandler)
+			v3.GET("/services", handlers.SystemdListHandler)
+			v3.POST("/services/action", handlers.SystemdActionHandler)
+			v3.GET("/security/overview", handlers.SecurityOverviewHandler)
+			v3.POST("/security/ufw", handlers.UFWActionHandler)
+			v3.POST("/database/query", handlers.DatabaseQueryHandler)
+			v3.GET("/deploy/git-status", handlers.GitStatusHandler)
+			v3.GET("/cron", handlers.CronListHandler)
+			v3.POST("/utils/network", handlers.NetworkDiagHandler)
+		}
 	}
 
 	return router
@@ -157,5 +175,69 @@ func TestPowerToolsValidation(t *testing.T) {
 	router.ServeHTTP(w4, req4)
 	if w4.Code != http.StatusBadRequest {
 		t.Fatalf("Expected 400 Bad Request for invalid copy payload, got %d", w4.Code)
+	}
+}
+
+func TestV3EndpointsValidation(t *testing.T) {
+	token := "v3_platform_test_token"
+	router := setupTestRouter(token)
+
+	// Telemetry without session_id -> 400
+	req1, _ := http.NewRequest(http.MethodGet, "/api/v3/telemetry", nil)
+	req1.Header.Set("X-Skydeck-Token", token)
+	w1 := httptest.NewRecorder()
+	router.ServeHTTP(w1, req1)
+	if w1.Code != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for telemetry without session_id, got %d", w1.Code)
+	}
+
+	// Process kill PID 1 protection -> 400
+	killBody, _ := json.Marshal(map[string]any{"session_id": "abc", "pid": 1, "signal": "KILL"})
+	req2, _ := http.NewRequest(http.MethodPost, "/api/v3/processes/kill", bytes.NewBuffer(killBody))
+	req2.Header.Set("X-Skydeck-Token", token)
+	req2.Header.Set("Content-Type", "application/json")
+	w2 := httptest.NewRecorder()
+	router.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusBadRequest {
+		t.Fatalf("Expected 400 when attempting to kill init PID 1, got %d", w2.Code)
+	}
+
+	// Docker container action command injection protection -> 400
+	dockerBody, _ := json.Marshal(map[string]any{
+		"session_id":   "abc",
+		"container_id": "nginx; rm -rf /",
+		"action":       "stop",
+	})
+	req3, _ := http.NewRequest(http.MethodPost, "/api/v3/docker/container/action", bytes.NewBuffer(dockerBody))
+	req3.Header.Set("X-Skydeck-Token", token)
+	req3.Header.Set("Content-Type", "application/json")
+	w3 := httptest.NewRecorder()
+	router.ServeHTTP(w3, req3)
+	if w3.Code != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for unsafe docker container_id, got %d", w3.Code)
+	}
+
+	// Systemd unit command injection protection -> 400
+	svcBody, _ := json.Marshal(map[string]any{
+		"session_id": "abc",
+		"unit":       "nginx && cat /etc/shadow",
+		"action":     "restart",
+	})
+	req4, _ := http.NewRequest(http.MethodPost, "/api/v3/services/action", bytes.NewBuffer(svcBody))
+	req4.Header.Set("X-Skydeck-Token", token)
+	req4.Header.Set("Content-Type", "application/json")
+	w4 := httptest.NewRecorder()
+	router.ServeHTTP(w4, req4)
+	if w4.Code != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for unsafe systemd unit, got %d", w4.Code)
+	}
+
+	// Security Overview missing session -> 400
+	req5, _ := http.NewRequest(http.MethodGet, "/api/v3/security/overview", nil)
+	req5.Header.Set("X-Skydeck-Token", token)
+	w5 := httptest.NewRecorder()
+	router.ServeHTTP(w5, req5)
+	if w5.Code != http.StatusBadRequest {
+		t.Fatalf("Expected 400 for security overview without session_id, got %d", w5.Code)
 	}
 }

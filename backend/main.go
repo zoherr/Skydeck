@@ -167,6 +167,39 @@ func main() {
 		api.POST("/archive/create", handlers.CreateArchiveHandler)
 		api.GET("/disk-usage", handlers.DiskUsageHandler)
 		api.POST("/copy", handlers.CopyItemHandler)
+
+		// v3.0.0 Complete VPS Platform Modules
+		v3 := api.Group("/v3")
+		{
+			// Telemetry & Process Manager
+			v3.GET("/telemetry", handlers.TelemetryHandler)
+			v3.GET("/processes", handlers.ProcessesListHandler)
+			v3.POST("/processes/kill", handlers.ProcessKillHandler)
+
+			// Docker Management
+			v3.GET("/docker/overview", handlers.DockerOverviewHandler)
+			v3.POST("/docker/container/action", handlers.DockerContainerActionHandler)
+			v3.GET("/docker/container/logs", handlers.DockerContainerLogsHandler)
+			v3.POST("/docker/prune", handlers.DockerPruneHandler)
+
+			// Systemd Services & Logs
+			v3.GET("/services", handlers.SystemdListHandler)
+			v3.POST("/services/action", handlers.SystemdActionHandler)
+			v3.GET("/services/logs", handlers.SystemdLogsHandler)
+			v3.GET("/logs/system", handlers.SystemLogTailHandler)
+
+			// Security Center
+			v3.GET("/security/overview", handlers.SecurityOverviewHandler)
+			v3.POST("/security/ufw", handlers.UFWActionHandler)
+
+			// Database Explorer, Deployment, Cron & Utilities
+			v3.POST("/database/query", handlers.DatabaseQueryHandler)
+			v3.GET("/deploy/git-status", handlers.GitStatusHandler)
+			v3.POST("/deploy/exec", handlers.DeployExecHandler)
+			v3.GET("/cron", handlers.CronListHandler)
+			v3.POST("/cron", handlers.CronSaveHandler)
+			v3.POST("/utils/network", handlers.NetworkDiagHandler)
+		}
 	}
 
 	// Strictly bind to 127.0.0.1 ONLY (never 0.0.0.0)

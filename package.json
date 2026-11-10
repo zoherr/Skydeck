@@ -1,7 +1,7 @@
 {
   "name": "skydeck",
-  "version": "2.5.0",
-  "description": "Your servers from above. A fast, secure VPS file manager.",
+  "version": "3.0.0",
+  "description": "Your servers from above. The complete VPS Management Platform.",
   "main": "electron/main.js",
   "author": "Skydeck Team",
   "scripts": {

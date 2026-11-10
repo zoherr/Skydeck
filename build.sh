@@ -2,7 +2,7 @@
 set -e
 
 echo "========================================================"
-echo "              Building Skydeck v2.5.0"
+echo "              Building Skydeck v3.0.0"
 echo "========================================================"
 
 echo "[1/3] Compiling Go Backend..."

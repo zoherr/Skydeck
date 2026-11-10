@@ -7,7 +7,6 @@ import ImagePreviewModal from '../components/ImagePreviewModal';
 import PermissionsModal from '../components/PermissionsModal';
 import UploadProgress from '../components/UploadProgress';
 import ConfirmDialog from '../components/ConfirmDialog';
-import TerminalPanel from '../components/TerminalPanel';
 import SearchModal from '../components/SearchModal';
 import DiskUsageModal from '../components/DiskUsageModal';
 import ArchiveModal from '../components/ArchiveModal';
@@ -23,6 +22,8 @@ export default function FileManager({
   onBookmark,
   isDiskUsageOpen,
   setIsDiskUsageOpen,
+  isTerminalOpen,
+  onToggleTerminal,
 }) {
   // Primary Pane State
   const [currentPath, setCurrentPath] = useState(activeSession?.initial_path || '/');
@@ -40,9 +41,6 @@ export default function FileManager({
   const [secondaryLoading, setSecondaryLoading] = useState(false);
   const [secondarySelectedFile, setSecondarySelectedFile] = useState(null);
   const [activePane, setActivePane] = useState('primary'); // 'primary' | 'secondary'
-
-  // Terminal Drawer State
-  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
 
   // Search Modal State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -149,14 +147,9 @@ export default function FileManager({
     }
   }, [navTarget]);
 
-  // Keyboard shortcut listener: Ctrl+` toggles terminal, F5 copies to other pane
+  // Keyboard shortcut listener: F5 copies to other pane, F6 moves
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Ctrl+` or Ctrl+~
-      if (e.ctrlKey && (e.key === '`' || e.key === '~')) {
-        e.preventDefault();
-        setIsTerminalOpen((prev) => !prev);
-      }
       // F5 in dual pane copies selected item to other pane
       if (e.key === 'F5' && isDualPane) {
         e.preventDefault();
@@ -493,7 +486,7 @@ export default function FileManager({
         onSearchChange={setSearchQuery}
         loading={loading}
         isTerminalOpen={isTerminalOpen}
-        onToggleTerminal={() => setIsTerminalOpen(!isTerminalOpen)}
+        onToggleTerminal={onToggleTerminal}
         isDualPane={isDualPane}
         onToggleDualPane={() => setIsDualPane(!isDualPane)}
         onOpenSearchModal={() => setIsSearchOpen(true)}
@@ -609,13 +602,6 @@ export default function FileManager({
           </div>
         )}
       </div>
-
-      {/* Integrated SSH Terminal Drawer */}
-      <TerminalPanel
-        session={activeSession}
-        isOpen={isTerminalOpen}
-        onClose={() => setIsTerminalOpen(false)}
-      />
 
       {/* Context Menu */}
       {contextMenu.visible && (

@@ -218,11 +218,15 @@ export const api = {
       body: JSON.stringify({ session_id: sessionId, path, mode }),
     }),
 
-  // Terminal WebSocket URL
-  getTerminalWsUrl: async (sessionId) => {
+  // Terminal WebSocket URL (supports host or Docker container shell)
+  getTerminalWsUrl: async (sessionId, containerId = '') => {
     const token = await getBackendAuthToken();
     const wsBase = backendBaseUrl.replace(/^http/, 'ws');
-    return `${wsBase}/api/terminal/ws?session_id=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(token)}`;
+    let url = `${wsBase}/api/terminal/ws?session_id=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(token)}`;
+    if (containerId) {
+      url += `&container=${encodeURIComponent(containerId)}`;
+    }
+    return url;
   },
 
   // v2.5.0 Power Tools
@@ -260,5 +264,101 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId, src_path: srcPath, dest_path: destPath, move }),
     }),
+
+  // v3.0.0 Complete VPS Platform APIs
+  v3: {
+    getTelemetry: (sessionId) =>
+      request(`/api/v3/telemetry?session_id=${encodeURIComponent(sessionId)}`),
+
+    getProcesses: (sessionId, sort = 'cpu') =>
+      request(`/api/v3/processes?session_id=${encodeURIComponent(sessionId)}&sort=${encodeURIComponent(sort)}`),
+
+    killProcess: (sessionId, pid, signal = 'TERM') =>
+      request('/api/v3/processes/kill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, pid, signal }),
+      }),
+
+    getDockerOverview: (sessionId) =>
+      request(`/api/v3/docker/overview?session_id=${encodeURIComponent(sessionId)}`),
+
+    dockerAction: (sessionId, containerId, action) =>
+      request('/api/v3/docker/container/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, container_id: containerId, action }),
+      }),
+
+    getDockerLogs: (sessionId, containerId, tail = 200) =>
+      request(`/api/v3/docker/container/logs?session_id=${encodeURIComponent(sessionId)}&container_id=${encodeURIComponent(containerId)}&tail=${tail}`),
+
+    dockerPrune: (sessionId) =>
+      request('/api/v3/docker/prune', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      }),
+
+    getServices: (sessionId) =>
+      request(`/api/v3/services?session_id=${encodeURIComponent(sessionId)}`),
+
+    serviceAction: (sessionId, unit, action) =>
+      request('/api/v3/services/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, unit, action }),
+      }),
+
+    getServiceLogs: (sessionId, unit, lines = 150) =>
+      request(`/api/v3/services/logs?session_id=${encodeURIComponent(sessionId)}&unit=${encodeURIComponent(unit)}&lines=${lines}`),
+
+    getSystemLog: (sessionId, path = '/var/log/syslog', lines = 150) =>
+      request(`/api/v3/logs/system?session_id=${encodeURIComponent(sessionId)}&path=${encodeURIComponent(path)}&lines=${lines}`),
+
+    getSecurityOverview: (sessionId) =>
+      request(`/api/v3/security/overview?session_id=${encodeURIComponent(sessionId)}`),
+
+    ufwAction: (sessionId, action, target = '') =>
+      request('/api/v3/security/ufw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, action, target }),
+      }),
+
+    databaseQuery: (payload) =>
+      request('/api/v3/database/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }),
+
+    getGitStatus: (sessionId, path = '/var/www') =>
+      request(`/api/v3/deploy/git-status?session_id=${encodeURIComponent(sessionId)}&path=${encodeURIComponent(path)}`),
+
+    deployExec: (sessionId, path, command) =>
+      request('/api/v3/deploy/exec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, path, command }),
+      }),
+
+    getCron: (sessionId) =>
+      request(`/api/v3/cron?session_id=${encodeURIComponent(sessionId)}`),
+
+    saveCron: (sessionId, content) =>
+      request('/api/v3/cron', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, content }),
+      }),
+
+    runNetworkDiag: (sessionId, tool, target) =>
+      request('/api/v3/utils/network', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, tool, target }),
+      }),
+  },
 };
 

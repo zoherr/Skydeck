@@ -36,6 +36,12 @@ func WebSocketTerminalHandler(c *gin.Context) {
 		return
 	}
 
+	containerID := c.Query("container")
+	if containerID != "" && !isValidSafeIdent(containerID) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container identifier"})
+		return
+	}
+
 	sess, err := session.DefaultManager.GetSession(sessionID)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -88,10 +94,19 @@ func WebSocketTerminalHandler(c *gin.Context) {
 		return
 	}
 
-	if err := sshSession.Shell(); err != nil {
-		log.Printf("[Terminal] Shell startup error: %v", err)
-		ws.WriteMessage(websocket.TextMessage, []byte("\r\n\x1b[31mShell startup failed: "+err.Error()+"\x1b[0m\r\n"))
-		return
+	if containerID != "" {
+		execCmd := "docker exec -it " + shellQuote(containerID) + ` sh -c "command -v bash >/dev/null && exec bash || exec sh"`
+		if err := sshSession.Start(execCmd); err != nil {
+			log.Printf("[Terminal] Container exec error: %v", err)
+			ws.WriteMessage(websocket.TextMessage, []byte("\r\n\x1b[31mContainer exec failed: "+err.Error()+"\x1b[0m\r\n"))
+			return
+		}
+	} else {
+		if err := sshSession.Shell(); err != nil {
+			log.Printf("[Terminal] Shell startup error: %v", err)
+			ws.WriteMessage(websocket.TextMessage, []byte("\r\n\x1b[31mShell startup failed: "+err.Error()+"\x1b[0m\r\n"))
+			return
+		}
 	}
 
 	var writeMutex sync.Mutex

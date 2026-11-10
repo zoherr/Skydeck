@@ -44,7 +44,7 @@ export default function Sidebar({
               Skydeck
             </div>
             <div className="text-[10px] text-accent font-mono leading-none mt-1">
-              v2.5.0 • VPS Workstation
+              v3.0.0 • VPS Platform
             </div>
           </div>
         </div>
